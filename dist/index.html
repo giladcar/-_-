@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#123b65">
+    <title>מצא לי</title>
+  <script type="module" crossorigin src="/assets/index-CYLvmnSH.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CiFS-u9J.css">
+</head>
+<body>
+
+    <header>
+        <h1>מצא לי</h1>
+        <p>מערכת לאיתור התקני Bluetooth</p>
+    </header>
+
+    <main>
+        <section class="connection-card">
+            <h2>ההתקן שלי</h2>
+            <p id="connectionStatus">עדיין לא מחובר להתקן</p>
+
+            <button id="scanButton" class="main-button">
+                חפש התקני Bluetooth
+            </button>
+        </section>
+
+        <section class="distance-card">
+            <h2>המרחק מההתקן</h2>
+            <div id="distance">--</div>
+            <p id="distanceStatus">יש להתחבר להתקן</p>
+        </section>
+
+        <section class="devices-card">
+            <h2>התקנים שנמצאו</h2>
+            <div id="devicesList">
+                <p>עדיין לא בוצעה סריקה</p>
+            </div>
+        </section>
+
+        <button id="speakButton" class="secondary-button">
+            🔊 הקרא לי את המרחק
+        </button>
+
+    </main>
+
+    <footer>
+        <p>מצא לי © 2026</p>
+    </footer>
+
+
+</body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">מצא לי</string>
+    <string name="title_activity_main">מצא לי</string>
+    <string name="package_name">com.findme.app</string>
+    <string name="custom_url_scheme">com.findme.app</string>
+</resources>

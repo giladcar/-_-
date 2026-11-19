@@ -1,0 +1,16 @@
+{
+  "appId": "com.findme.app",
+  "appName": "מצא לי",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "plugins": {
+    "BluetoothLe": {
+      "displayStrings": {
+        "scanning": "מחפש התקנים...",
+        "cancel": "ביטול",
+        "availableDevices": "התקנים זמינים",
+        "noDeviceFound": "לא נמצאו התקנים"
+      }
+    }
+  }
+}
