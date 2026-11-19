@@ -1,15 +1,34 @@
 import { BleClient, ScanMode } from "@capacitor-community/bluetooth-le";
+import { registerPlugin } from "@capacitor/core";
+
+const BluetoothClassic = registerPlugin("BluetoothClassic");
 
 let initialized = false;
-let scanning = false;
+let bleScanning = false;
+let classicScanning = false;
 let scanTimer = null;
-let scanFinishedCallback = null;
+let finishCallback = null;
+
+let classicDeviceListener = null;
+let classicFinishedListener = null;
 
 export async function initializeBluetooth() {
     if (initialized) return;
 
     await BleClient.initialize();
     initialized = true;
+}
+
+async function removeClassicListeners() {
+    if (classicDeviceListener) {
+        await classicDeviceListener.remove();
+        classicDeviceListener = null;
+    }
+
+    if (classicFinishedListener) {
+        await classicFinishedListener.remove();
+        classicFinishedListener = null;
+    }
 }
 
 export async function scanBluetoothDevices(
@@ -19,17 +38,20 @@ export async function scanBluetoothDevices(
 ) {
     await initializeBluetooth();
 
-    if (scanning) {
-        await stopBluetoothScan();
+    if (bleScanning || classicScanning) {
+        await stopBluetoothScan("restart");
     }
 
-    const enabled = await BleClient.isEnabled();
-
-    if (!enabled) {
-        await BleClient.requestEnable();
-    }
+    finishCallback = onScanFinished;
 
     try {
+        const enabled = await BleClient.isEnabled();
+
+        if (!enabled) {
+            await BleClient.requestEnable();
+        }
+
+        // BLE scan
         await BleClient.requestLEScan(
             {
                 allowDuplicates: true,
@@ -41,20 +63,47 @@ export async function scanBluetoothDevices(
                 onDeviceFound({
                     deviceId: result.device.deviceId,
                     name: result.device.name || null,
-                    rssi: result.rssi ?? null
+                    rssi: result.rssi ?? null,
+                    type: "ble"
                 });
             }
         );
 
-        scanning = true;
-        scanFinishedCallback = onScanFinished;
+        bleScanning = true;
+
+        // Bluetooth Classic listeners
+        await removeClassicListeners();
+
+        classicDeviceListener =
+            await BluetoothClassic.addListener(
+                "deviceFound",
+                device => {
+                    onDeviceFound(device);
+                }
+            );
+
+        classicFinishedListener =
+            await BluetoothClassic.addListener(
+                "scanFinished",
+                () => {
+                    classicScanning = false;
+                }
+            );
+
+        // Bluetooth Classic scan
+        classicScanning = true;
+
+        await BluetoothClassic.startDiscovery();
 
         scanTimer = setTimeout(() => {
             stopBluetoothScan("timeout");
         }, duration);
 
     } catch (error) {
-        scanning = false;
+        console.error("Bluetooth scan failed:", error);
+
+        await stopBluetoothScan("error");
+
         throw error;
     }
 }
@@ -65,19 +114,33 @@ export async function stopBluetoothScan(reason = "manual") {
         scanTimer = null;
     }
 
-    if (!scanning) return;
-
-    scanning = false;
-
-    try {
-        await BleClient.stopLEScan();
-    } finally {
-        const callback = scanFinishedCallback;
-        scanFinishedCallback = null;
-
-        if (callback) {
-            callback(reason);
+    if (bleScanning) {
+        try {
+            await BleClient.stopLEScan();
+        } catch (error) {
+            console.error("BLE stop error:", error);
         }
+
+        bleScanning = false;
+    }
+
+    if (classicScanning) {
+        try {
+            await BluetoothClassic.stopDiscovery();
+        } catch (error) {
+            console.error("Classic stop error:", error);
+        }
+
+        classicScanning = false;
+    }
+
+    await removeClassicListeners();
+
+    const callback = finishCallback;
+    finishCallback = null;
+
+    if (callback) {
+        callback(reason);
     }
 }
 

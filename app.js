@@ -28,8 +28,11 @@ scanButton.addEventListener("click", async () => {
         scanning = true;
 
         scanButton.textContent = "עצור סריקה";
-        connectionStatus.textContent = "מחפש התקני Bluetooth...";
-        devicesList.innerHTML = "<p>מחפש התקנים בסביבה...</p>";
+        connectionStatus.textContent =
+            "מחפש התקני Bluetooth מסוג Classic ו-BLE...";
+
+        devicesList.innerHTML =
+            "<p>מחפש התקנים בסביבה...</p>";
 
         await scanBluetoothDevices(
             handleDeviceFound,
@@ -38,16 +41,16 @@ scanButton.addEventListener("click", async () => {
         );
 
     } catch (error) {
-        console.error("Bluetooth scan error:", error);
+      console.error("Bluetooth scan error:", error);
 
-        scanning = false;
-        scanButton.textContent = "חפש התקני Bluetooth";
+scanning = false;
+scanButton.textContent = "חפש התקני Bluetooth";
 
-        connectionStatus.textContent =
-            "שגיאה בהפעלת Bluetooth";
+connectionStatus.textContent =
+    "שגיאת Bluetooth: " + (error?.message || String(error));
 
-        devicesList.innerHTML =
-            "<p>לא הצלחנו להתחיל סריקה. בדוק את הרשאות Bluetooth.</p>";
+devicesList.textContent =
+    error?.message || String(error) || "לא הצלחנו להתחיל סריקה";
     }
 });
 
@@ -62,7 +65,7 @@ function finishScan(reason) {
             devicesList.innerHTML =
                 "<p>לא נמצאו התקני Bluetooth בסביבה.</p>";
         }
-    } else {
+    } else if (reason === "manual") {
         connectionStatus.textContent = "הסריקה הופסקה";
     }
 }
@@ -83,6 +86,7 @@ function handleDeviceFound(device) {
         selectedDevice &&
         selectedDevice.deviceId === device.deviceId
     ) {
+        selectedDevice = updatedDevice;
         updateDistance(device.rssi);
     }
 
@@ -105,6 +109,12 @@ function renderDevices() {
         const name = document.createElement("h3");
         name.textContent = device.name || "התקן ללא שם";
 
+        const type = document.createElement("p");
+        type.textContent =
+            device.type === "classic"
+                ? "סוג: Bluetooth Classic"
+                : "סוג: Bluetooth LE";
+
         const signal = document.createElement("p");
         signal.textContent =
             device.rssi != null
@@ -112,18 +122,36 @@ function renderDevices() {
                 : "עוצמת האות אינה זמינה";
 
         const button = document.createElement("button");
-        button.textContent = "בחר והתחבר";
+
+        button.textContent =
+            device.type === "classic"
+                ? "בחר מכשיר"
+                : "בחר והתחבר";
 
         button.addEventListener("click", () => {
             selectDevice(device);
         });
 
-        item.append(name, signal, button);
+        item.append(name, type, signal, button);
         devicesList.appendChild(item);
     });
 }
 
 async function selectDevice(device) {
+    if (device.type === "classic") {
+        selectedDevice = device;
+
+        connectionStatus.textContent =
+            `נבחר ${device.name || "מכשיר Bluetooth"}`;
+
+        updateDistance(device.rssi);
+
+        distanceStatus.textContent =
+            "הערכת מרחק לפי אות Bluetooth Classic. הנתון אינו מתעדכן לאחר הסריקה.";
+
+        return;
+    }
+
     try {
         connectionStatus.textContent = "מתחבר להתקן...";
 
@@ -173,12 +201,13 @@ function updateDistance(rssi) {
     distanceElement.textContent =
         `כ-${distance.toFixed(1)}`;
 
-    distanceStatus.textContent = "מטרים (הערכה בלבד)";
+    distanceStatus.textContent =
+        "מטרים (הערכה בלבד)";
 }
 
 speakButton.addEventListener("click", () => {
     if (!selectedDevice) {
-        alert("קודם צריך להתחבר להתקן");
+        alert("קודם צריך לבחור התקן");
         return;
     }
 
