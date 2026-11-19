@@ -19,10 +19,7 @@ let scanning = false;
 
 scanButton.addEventListener("click", async () => {
     if (scanning) {
-        await stopBluetoothScan();
-        scanning = false;
-        scanButton.textContent = "חפש התקני Bluetooth";
-        connectionStatus.textContent = "הסריקה הופסקה";
+        await stopBluetoothScan("manual");
         return;
     }
 
@@ -34,18 +31,41 @@ scanButton.addEventListener("click", async () => {
         connectionStatus.textContent = "מחפש התקני Bluetooth...";
         devicesList.innerHTML = "<p>מחפש התקנים בסביבה...</p>";
 
-        await scanBluetoothDevices(handleDeviceFound);
+        await scanBluetoothDevices(
+            handleDeviceFound,
+            finishScan,
+            15000
+        );
 
     } catch (error) {
+        console.error("Bluetooth scan error:", error);
+
         scanning = false;
         scanButton.textContent = "חפש התקני Bluetooth";
 
         connectionStatus.textContent =
-            "לא ניתן להפעיל Bluetooth";
+            "שגיאה בהפעלת Bluetooth";
 
-        console.error(error);
+        devicesList.innerHTML =
+            "<p>לא הצלחנו להתחיל סריקה. בדוק את הרשאות Bluetooth.</p>";
     }
 });
+
+function finishScan(reason) {
+    scanning = false;
+    scanButton.textContent = "חפש התקני Bluetooth";
+
+    if (reason === "timeout") {
+        connectionStatus.textContent = "הסריקה הסתיימה";
+
+        if (devices.size === 0) {
+            devicesList.innerHTML =
+                "<p>לא נמצאו התקני Bluetooth בסביבה.</p>";
+        }
+    } else {
+        connectionStatus.textContent = "הסריקה הופסקה";
+    }
+}
 
 function handleDeviceFound(device) {
     if (!device.deviceId) return;
@@ -88,7 +108,7 @@ function renderDevices() {
         const signal = document.createElement("p");
         signal.textContent =
             device.rssi != null
-                ? `עוצמת אות: ${device.rssi}`
+                ? `עוצמת אות: ${device.rssi} dBm`
                 : "עוצמת האות אינה זמינה";
 
         const button = document.createElement("button");
@@ -106,6 +126,10 @@ function renderDevices() {
 async function selectDevice(device) {
     try {
         connectionStatus.textContent = "מתחבר להתקן...";
+
+        if (scanning) {
+            await stopBluetoothScan("manual");
+        }
 
         await connectBluetoothDevice(
             device.deviceId,
@@ -130,7 +154,9 @@ async function selectDevice(device) {
         connectionStatus.textContent =
             "לא הצלחנו להתחבר להתקן";
 
-        alert("לא ניתן להתחבר להתקן הזה. ייתכן שהוא אינו תומך בחיבור BLE.");
+        alert(
+            "לא ניתן להתחבר להתקן הזה. ייתכן שהוא אינו תומך בחיבור BLE."
+        );
     }
 }
 
@@ -163,7 +189,8 @@ speakButton.addEventListener("click", () => {
         return;
     }
 
-    const message = `המרחק המשוער מההתקן הוא ${distance} מטרים`;
+    const message =
+        `המרחק המשוער מההתקן הוא ${distance} מטרים`;
 
     const speech = new SpeechSynthesisUtterance(message);
     speech.lang = "he-IL";
